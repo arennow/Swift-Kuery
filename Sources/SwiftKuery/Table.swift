@@ -361,9 +361,9 @@ open class Table: Buildable {
      - Parameter references: An Array of columns from the foreign table that are referenced by the foreign key.
      - Returns: A new instance of `Table`.
      */
-    public func foreignKey(_ columns: [Column], references: [Column]) -> Self {
+    public func foreignKey(_ columns: [Column], references: [Column], actions: [ConstraintAction] = []) -> Self {
         var errorString: String = ""
-        guard let newKey = ForeignKey(keys: columns, refs: references, self._name, &errorString) else {
+        guard let newKey = ForeignKey(keys: columns, refs: references, self._name, actions: actions, &errorString) else {
             syntaxError += errorString
             return self
         }
@@ -399,8 +399,8 @@ open class Table: Buildable {
      - Parameter references: A column in the foreign table the foreign key references.
      - Returns: A new instance of `Table`.
     */
-    public func foreignKey(_ column: Column, references: Column) -> Self {
-        return foreignKey([column], references: [references])
+    public func foreignKey(_ column: Column, references: Column, actions: [ConstraintAction] = []) -> Self {
+        return foreignKey([column], references: [references], actions: actions)
     }
 
     private static func columnsBelongTo(table: Table, columns: [Column]) -> Bool {

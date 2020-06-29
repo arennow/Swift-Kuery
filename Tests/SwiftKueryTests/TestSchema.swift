@@ -87,6 +87,24 @@ class TestSchema: XCTestCase {
         var createStmt = createTable(t1.foreignKey(t1.a, references: t2.b), connection: connection)
         var expectedCreateStmt = "CREATE TABLE \"table1\" (\"a\" text PRIMARY KEY DEFAULT 'qiwi' COLLATE \"en_US\", \"b\" integer AUTO_INCREMENT, \"c\" double DEFAULT 4.95 CHECK (\"c\" > 0), FOREIGN KEY (\"a\") REFERENCES \"table2\"(\"b\"))"
         XCTAssertEqual(createStmt, expectedCreateStmt, "\nError in table creation: \n\(createStmt) \ninstead of \n\(expectedCreateStmt)")
+        
+        // Need to reset tables
+        t1 = Table1()
+        t2 = Table2()
+
+        // This tests a one to one foreign key, with an ON UPDATE action
+        createStmt = createTable(t1.foreignKey(t1.a, references: t2.b, actions: [.onUpdate(.cascade)]), connection: connection)
+        expectedCreateStmt = "CREATE TABLE \"table1\" (\"a\" text PRIMARY KEY DEFAULT 'qiwi' COLLATE \"en_US\", \"b\" integer AUTO_INCREMENT, \"c\" double DEFAULT 4.95 CHECK (\"c\" > 0), FOREIGN KEY (\"a\") REFERENCES \"table2\"(\"b\") ON UPDATE CASCADE)"
+        XCTAssertEqual(createStmt, expectedCreateStmt, "\nError in table creation: \n\(createStmt) \ninstead of \n\(expectedCreateStmt)")
+
+        // Need to reset tables
+        t1 = Table1()
+        t2 = Table2()
+
+        // This tests a one to one foreign key, with an ON UPDATE and ON DELETE action
+        createStmt = createTable(t1.foreignKey(t1.a, references: t2.b, actions: [.onUpdate(.cascade), .onDelete(.setNull)]), connection: connection)
+        expectedCreateStmt = "CREATE TABLE \"table1\" (\"a\" text PRIMARY KEY DEFAULT 'qiwi' COLLATE \"en_US\", \"b\" integer AUTO_INCREMENT, \"c\" double DEFAULT 4.95 CHECK (\"c\" > 0), FOREIGN KEY (\"a\") REFERENCES \"table2\"(\"b\") ON UPDATE CASCADE ON DELETE SET NULL)"
+        XCTAssertEqual(createStmt, expectedCreateStmt, "\nError in table creation: \n\(createStmt) \ninstead of \n\(expectedCreateStmt)")
 
         // Need to reset tables
         t1 = Table1()

@@ -16,13 +16,46 @@
 
 import Foundation
 
+public enum ConstraintAction: Buildable {
+    public enum Behavior: Buildable {
+        case noAction
+        case restrict
+        case setNull
+        case setDefault
+        case cascade
+        
+        public func build(queryBuilder: QueryBuilder) -> String {
+            // For the moment, we're just returning fixed strings. I'm pretty sure SQLite and MySQL use the same syntax for these anyway.
+            
+            switch self {
+                case .noAction: return "NO ACTION"
+                case .restrict: return "RESTRICT"
+                case .setNull: return "SET NULL"
+                case .setDefault: return "SET DEFAULT"
+                case .cascade: return "CASCADE"
+            }
+        }
+    }
+    
+    case onUpdate(Behavior)
+    case onDelete(Behavior)
+    
+    public func build(queryBuilder: QueryBuilder) -> String {
+        switch self {
+            case .onUpdate(let b): return "ON UPDATE \(b.build(queryBuilder: queryBuilder))"
+            case .onDelete(let b): return "ON DELETE \(b.build(queryBuilder: queryBuilder))"
+        }
+    }
+}
+
 struct ForeignKey: Buildable {
     var keyColumns: [Column]
     var refColumns: [Column]
     var keyNames: [String]
     var refNames: [String]
+    var constraintActions: [ConstraintAction]
 
-    public init?(keys: [Column], refs: [Column],_ tableName: String, _ errorString: inout String) {
+    public init?(keys: [Column], refs: [Column], _ tableName: String, actions: [ConstraintAction] = [], _ errorString: inout String) {
         if !ForeignKey.validKey(keys, refs, tableName, &errorString) {
             return nil
         }
@@ -30,6 +63,7 @@ struct ForeignKey: Buildable {
         refColumns = refs
         keyNames = keyColumns.map { "\($0._table._name).\($0.name)" }
         refNames = refColumns.map { "\($0._table._name).\($0.name)" }
+        constraintActions = actions
     }
 
     static func validKey(_ keys: [Column], _ refs: [Column],_ tableName: String, _ errorString: inout String) -> Bool {
@@ -68,7 +102,7 @@ struct ForeignKey: Buildable {
         return true
     }
 
-    func build(queryBuilder: QueryBuilder) -> String {
+    public func build(queryBuilder: QueryBuilder) -> String {
         var append = ", FOREIGN KEY ("
         append += keyColumns.map { Utils.packName($0.name, queryBuilder: queryBuilder) }.joined(separator: ", ")
         append += ") REFERENCES "
@@ -76,6 +110,7 @@ struct ForeignKey: Buildable {
         append += "("
         append += refColumns.map { Utils.packName($0.name, queryBuilder: queryBuilder) }.joined(separator: ", ")
         append += ")"
+        append += constraintActions.map { " " + $0.build(queryBuilder: queryBuilder) }.joined()
         return append
     }
 }
@@ -83,7 +118,7 @@ struct ForeignKey: Buildable {
 extension ForeignKey: Hashable {
 
     #if swift(>=4.2)
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         let baseHash = "foreignKey".hashValue
         hasher.combine(baseHash)
         for key in keyNames {
